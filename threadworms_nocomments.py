@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #! python3
 
-import random,pygame,sys,threading
+import random,pygame,sys,threading,pprint
 from pygame.locals import *
 
 # setting up contants
@@ -64,7 +64,9 @@ class Worm(threading.Thread):
             starty = random.randint(0,cells_high-1)
             if grid[startx][starty] is None:
                 break
-        grid[startx][starty] = self.color  # set init color
+        grid[startx][starty] = self.color  # set init color,placeholder占位
+        # print(grid[startx][starty])
+        # print(grid[startx])
         grid_lock.release()
 
         self.body = [{'x':startx,'y':starty}]   # worm body
@@ -101,6 +103,7 @@ class Worm(threading.Thread):
             pygame.time.wait(self.speed)
 
     def getNextPosition(self):
+        """根据虫头当前的位置和方向，来计算出虫头下一步的x和y坐标"""
         if self.direction == up:
             nextx = self.body[head]['x']
             nexty = self.body[head]['y'] - 1
@@ -114,15 +117,19 @@ class Worm(threading.Thread):
             nextx = self.body[head]['x'] + 1
             nexty = self.body[head]['y']
         else:
-            assert False,'Bad value for self.direction: %s' % self.direction
+            assert False,'Bad value for self.direction: %s' % self.direction  #断言，爆出方向错误
         return nextx,nexty
 
     def getNewDirection(self):
-        x = self.body[head]['x']
+        """判断头前后左右格是否被占，来获得新的移动方向"""
+        x = self.body[head]['x']  # [{'x': 6, 'y': 2}, {'x': 7, 'y': 2}, {'x': 8, 'y': 2}]
+        # [head]=0,对应的是头，[body]=1...对应的是身子，[butt]=-1对应的是屁股
         y = self.body[head]['y']
+        # print(self.body)
 
         newDirection = []
         if y - 1 not in (-1,cells_high) and grid[x][y-1] is None:
+            # (-1,cells_high)对应的是顶和底部边界，grid[x][y-1]对应的是y轴上一格是不是none
             newDirection.append(up)
         if y + 1 not in (-1,cells_high) and grid[x][y+1] is None:
             newDirection.append(down)
@@ -132,9 +139,9 @@ class Worm(threading.Thread):
             newDirection.append(right)
 
         if newDirection == []:
-            return None
+            return None     # None表示没有地方移动
 
-        return random.choice(newDirection)
+        return random.choice(newDirection)  # 对可以朝向的方向在做随机
 
 def main():
     global fpsclock, displaysurf
