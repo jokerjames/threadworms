@@ -42,9 +42,9 @@ class Worm(threading.Thread):
         # super(Worm,self).__init__()
         self.name = name
         if maxsize is None:
-            self.maxsize = random.randint(4,10)
+            self.maxsize = random.randint(4,6)
             if random.randint(0,4) == 0:
-                self.maxsize += random.randint(10,20)
+                self.maxsize += random.randint(3,6)
         else:
             self.maxsize = maxsize
 
@@ -54,23 +54,24 @@ class Worm(threading.Thread):
             self.color = color
 
         if speed is None:
-            self.speed = random.randint(20,500)
+            self.speed = random.randint(10,600)
         else:
             self.speed = speed
 
         grid_lock.acquire()
         while True:
+            # 多线程循环生成初始x，y坐标位置
             startx = random.randint(0,cells_wide-1)  # random position to start
             starty = random.randint(0,cells_high-1)
             if grid[startx][starty] is None:
                 break
-        grid[startx][starty] = self.color  # set init color,placeholder占位
+        grid[startx][starty] = self.color  # set init color,placeholder（占位）
         # print(grid[startx][starty])
         # print(grid[startx])
         grid_lock.release()
 
-        self.body = [{'x':startx,'y':starty}]   # worm body
-        self.direction = random.choice((up,down,left,right))    # worm random direction
+        self.body = [{'x':startx,'y':starty}]   # worm body=head=butt one grid position
+        self.direction = random.choice((up,down,left,right))    # worm init random direction
 
     def run(self):
         while True:
@@ -82,21 +83,22 @@ class Worm(threading.Thread):
             grid_lock.acquire()
             nextx,nexty = self.getNextPosition()
             if nextx in (-1,cells_wide) or nexty in (-1,cells_high) or grid[nextx][nexty] is not None:
-                self.direction = self.getNewDirection()
+                # 顶、底、左、右边框或grid被占用，
+                self.direction = self.getNewDirection()  # 重新计算方向，赋方向值
 
-                if self.direction is None:
-                    self.body.reverse()
-                    self.direction = self.getNewDirection()
-                if self.direction is not None:
-                    nextx,nexty = self.getNextPosition()
+                if self.direction is None:  # 返回的方向是None
+                    self.body.reverse()  # self.body是一个列表，将列表内的元素翻转
+                    self.direction = self.getNewDirection()  # 重新计算方向
+                if self.direction is not None:  # 方向有值
+                    nextx,nexty = self.getNextPosition()  # 根据方向值计算x，y坐标位置
 
             if self.direction is not None:
-                grid[nextx][nexty] = self.color
-                self.body.insert(0,{'x':nextx,'y':nexty})
+                grid[nextx][nexty] = self.color  # grid赋值颜色，同初始化中的占位颜色值
+                self.body.insert(0,{'x':nextx,'y':nexty})  # 往worm body列表的0位(head)插入新的x，y字典位置数值
 
                 if len(self.body) > self.maxsize:
-                    grid[self.body[butt]['x']][self.body[butt]['y']] = None
-                    del self.body[butt]
+                    grid[self.body[butt]['x']][self.body[butt]['y']] = None  # 将body[butt]占的grid赋值为None
+                    del self.body[butt]  # 删除body列表最后一个元素字典，这样worm会始终保持最长长度
             else:
                 self.direction = random.choice((up,down,left,right))
             grid_lock.release()
