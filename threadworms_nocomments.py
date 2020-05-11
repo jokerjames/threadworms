@@ -60,7 +60,7 @@ class Worm(threading.Thread):
 
         grid_lock.acquire()
         while True:
-            # 多线程循环生成初始x，y坐标位置
+            # 初始化便进行生成。多线程循环生成初始x，y坐标位置
             startx = random.randint(0,cells_wide-1)  # random position to start
             starty = random.randint(0,cells_high-1)
             if grid[startx][starty] is None:
@@ -81,7 +81,7 @@ class Worm(threading.Thread):
                 self.direction = random.choice((up,down,left,right))
 
             grid_lock.acquire()
-            nextx,nexty = self.getNextPosition()
+            nextx,nexty = self.getNextPosition()  # 往前走一步
             if nextx in (-1,cells_wide) or nexty in (-1,cells_high) or grid[nextx][nexty] is not None:
                 # 顶、底、左、右边框或grid被占用，
                 self.direction = self.getNewDirection()  # 重新计算方向，赋方向值
@@ -146,7 +146,7 @@ class Worm(threading.Thread):
         return random.choice(newDirection)  # 对可以朝向的方向在做随机
 
 def main():
-    global fpsclock, displaysurf
+    global fpsclock, screen
 
     squares = """
 ...........................
@@ -170,13 +170,13 @@ def main():
 
     pygame.init()
     fpsclock = pygame.time.Clock()
-    displaysurf = pygame.display.set_mode((windowwidth,windowheight))
+    screen = pygame.display.set_mode((windowwidth, windowheight))
     pygame.display.set_caption('Threadworms')
 
-    worms = []
+    worms = []   # worm虫的列表，循环限定数量进行start（）
     for i in range(num_worms):
         worms.append(Worm(name='Worm %s' % i))
-        worms[-1].start()
+        worms[-1].start()   # .start（）启动类Worm这个多线程进程！！！
     while True:
         handleEvents()
         drawGrid()
@@ -193,21 +193,25 @@ def handleEvents():
             sys.exit()
 
 def drawGrid():
-    displaysurf.fill(bgcolor)
+    """添加网格，描绘worm每个格的颜色"""
+    screen.fill(bgcolor)
     for x in range(0,windowwidth,cell_size):
-        pygame.draw.line(displaysurf,grid_line_color,(x,0),(x,windowheight))
+        pygame.draw.line(screen, grid_line_color, (x, 0), (x, windowheight))  # 竖条
     for y in range(0,windowheight,cell_size):
-        pygame.draw.line(displaysurf,grid_line_color,(0,y),(windowwidth,y))
+        pygame.draw.line(screen, grid_line_color, (0, y), (windowwidth, y))  # 横条
 
+    # 绘制格子上的颜色
     grid_lock.acquire()
     for x in range(0,cells_wide):
         for y in range(0,cells_high):
             if grid[x][y] is None:
                 continue
             color = grid[x][y]
+            print(color)
             darkerColor = (max(color[0] - 50,0),max(color[1] - 50,0),max(color[2] - 50,0))
-            pygame.draw.rect(displaysurf,darkerColor,(x * cell_size,y*cell_size,cell_size,cell_size))
-            pygame.draw.rect(displaysurf,color,(x*cell_size+4,y*cell_size+4,cell_size-8,cell_size-8))
+            # print(darkerColor)
+            pygame.draw.rect(screen, darkerColor, (x * cell_size, y * cell_size, cell_size, cell_size))
+            pygame.draw.rect(screen, color, (x * cell_size + 4, y * cell_size + 4, cell_size - 8, cell_size - 8))
     grid_lock.release()
 
 def setGridSquares(squares,color=(192,192,192)):
