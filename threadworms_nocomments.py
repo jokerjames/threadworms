@@ -10,7 +10,7 @@ fps = 30
 cell_size = 20  # how many pixels wide and high each "cell" in the gird is
 cells_wide = 32  # how many cells wide the grid is
 cells_high = 24  # how many cells high the grid is
-grid = []
+grid = []  # ！！！！！核心全局变量grid列表，数值color，数据分3种：空白None，字母固定颜色，worms初始颜色，但多线程数据在变化
 for x in range(cells_wide):
     grid.append([None] * cells_high)    # put [None] in all cells
 
@@ -61,14 +61,17 @@ class Worm(threading.Thread):
         grid_lock.acquire()
         while True:
             # 初始化便进行生成。多线程循环生成初始x，y坐标位置
-            startx = random.randint(0,cells_wide-1)  # random position to start
+            startx = random.randint(0,cells_wide-1)  # random init position
+            # print(startx)  # 因为多线程，初始生成的随机点位是比网格格数多
             starty = random.randint(0,cells_high-1)
-            if grid[startx][starty] is None:
+            if grid[startx][starty] is None:  #因为是多线程随机，所以startx和starty的数量会不等，缺少的数据便是None，break跳出
                 break
-        grid[startx][starty] = self.color  # set init color,placeholder（占位）
-        # print(grid[startx][starty])
+
+        grid[startx][starty] = self.color  # set init random color,placeholder（占位）每个格子都给了随机颜色
+        # print(grid[startx][starty])  # 这里会有24个网格初始赋值了随机颜色
         # print(grid[startx])
         grid_lock.release()
+
 
         self.body = [{'x':startx,'y':starty}]   # worm body=head=butt one grid position
         self.direction = random.choice((up,down,left,right))    # worm init random direction
@@ -105,7 +108,7 @@ class Worm(threading.Thread):
             pygame.time.wait(self.speed)
 
     def getNextPosition(self):
-        """根据虫头当前的位置和方向，来计算出虫头下一步的x和y坐标"""
+        """根据虫头当前的位置和方向，来计算并移动虫头下一步的x和y坐标"""
         if self.direction == up:
             nextx = self.body[head]['x']
             nexty = self.body[head]['y'] - 1
@@ -146,6 +149,7 @@ class Worm(threading.Thread):
         return random.choice(newDirection)  # 对可以朝向的方向在做随机
 
 def main():
+    """main()函数是用于测试这些类和函数功能的，其他类和函数可以被import出去使用。"""
     global fpsclock, screen
 
     squares = """
@@ -194,20 +198,21 @@ def handleEvents():
 
 def drawGrid():
     """添加网格，描绘worm每个格的颜色"""
-    screen.fill(bgcolor)
+    screen.fill(bgcolor)  # 绘制bg
     for x in range(0,windowwidth,cell_size):
-        pygame.draw.line(screen, grid_line_color, (x, 0), (x, windowheight))  # 竖条
+        pygame.draw.line(screen, grid_line_color, (x, 0), (x, windowheight))  # 绘制竖条
     for y in range(0,windowheight,cell_size):
-        pygame.draw.line(screen, grid_line_color, (0, y), (windowwidth, y))  # 横条
+        pygame.draw.line(screen, grid_line_color, (0, y), (windowwidth, y))  # 绘制横条
 
-    # 绘制格子上的颜色
+    # 绘制worm和字体格子上的颜色
     grid_lock.acquire()
     for x in range(0,cells_wide):
         for y in range(0,cells_high):
-            if grid[x][y] is None:
+            if grid[x][y] is None:  # ！！！grid空白的格子颜色是None，continue跳过，那么剩下的都将是固定的字母和移动的worms
                 continue
-            color = grid[x][y]
-            print(color)
+            color = grid[x][y]  # 通过遍历x，y来读取grid下面的颜色
+            # print(color)
+            # color = (168,0,65)
             darkerColor = (max(color[0] - 50,0),max(color[1] - 50,0),max(color[2] - 50,0))
             # print(darkerColor)
             pygame.draw.rect(screen, darkerColor, (x * cell_size, y * cell_size, cell_size, cell_size))
@@ -216,24 +221,30 @@ def drawGrid():
 
 def setGridSquares(squares,color=(192,192,192)):
     squares = squares.split('\n')
+    print(squares)
+    # print(min(len(squares),cells_high))
     if squares[0] == '':
-        del squares[0]
+        del squares[0]  # 删掉开头''
     if squares[-1] == '':
-        del squares[-1]
+        del squares[-1]  # 删掉结尾''
 
     grid_lock.acquire()
-    for y in range(min(len(squares),cells_high)):
-        for x in range(min(len(squares[y]),cells_wide)):
-            if squares[y][x] == ' ':
-                grid[x][y] = None
-            elif squares[y][x] == '.':
+    for y in range(min(len(squares),cells_high)):  # 先行后列！！！使用squares有多少行作为range数位
+        for x in range(min(len(squares[y]),cells_wide)):  # 这里设置了求得squares一行有多少位，作为range的数位
+            # if squares[y][x] == ' ':  # 保险代码，上面已经删除开头结尾''空数据了
+            #     grid[x][y] = None
+            if squares[y][x] == '.':  # 表格里面数据是'.'，就pass跳过，去掉.以外的都付统一颜色，
                 pass
+            elif squares[y][x] == 'H':   # 这里也可以一直elif下去，== 'H'，赋值颜色
+                grid[x][y] = (110,198,50)
             else:
-                grid[x][y] = color
+                grid[x][y] = color  # 赋值灰色
     grid_lock.release()
 
 if __name__ == '__main__':
     main()
+#  用于对当前页面上的类或是Function进行测试运行，可以将其写在main（）Function下面，这样在导入import至其他代码页中时，
+#  main（）Function是不会允许的。
 
 
 
